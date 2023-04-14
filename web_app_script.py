@@ -23,24 +23,30 @@ date_range = st.sidebar.date_input(
 )
 
 
-df = pd.read_sql_query(
-    """
-    select
-        rev.datetime::date AS datetime, 
-        count(rev.restaurant_id) AS count,
-        res.location_city
-    from
-        reviews rev
-    inner join restaurants res
-        on res.restaurant_id = rev.restaurant_id
-    where
-        res.location_city IN ('Amsterdam', 'Rotterdam','Groningen') AND
-        datetime BETWEEN '2022-01-01' AND '2022-12-31'
-    group by (rev.datetime::date), (res.location_city)
-    order by (datetime)
-    """,
-    con=engine,
-)
+@st.cache_data()
+def get_data():
+    df = pd.read_sql_query(
+        """
+        select
+            rev.datetime::date AS datetime, 
+            count(rev.restaurant_id) AS count,
+            res.location_city
+        from
+            reviews rev
+        inner join restaurants res
+            on res.restaurant_id = rev.restaurant_id
+        where
+            res.location_city IN ('Amsterdam', 'Rotterdam','Groningen') AND
+            datetime BETWEEN '2022-01-01' AND '2022-12-31'
+        group by (rev.datetime::date), (res.location_city)
+        order by (datetime)
+        """,
+        con=engine,
+    )
+    return df
+
+
+df = get_data()
 
 df_filtered = df.loc[df["datetime"].between(date_range[0], date_range[1])]
 fig_filtered = px.line(
@@ -57,28 +63,33 @@ st.plotly_chart(fig_filtered, theme=None)
 st.title("COVID Insights 2022")
 
 
-df_2 = pd.read_sql_query(
-    """
-    select
-        municipality_name,
-        total_reported,
-        date_of_publication
-    from
-        municipality_totals_daily
-    where
-        municipality_name in ('Amsterdam', 'Rotterdam', 'Groningen')
-        and
-            date_of_publication between '2022-01-01' and '2022-12-31'
-    group by
-        (date_of_publication::date),
-        (municipality_name),
-        (total_reported)
-    order by
-        (date_of_publication)
-    """,
-    con=engine,
-)
+@st.cache_data()
+def get_data2():
+    df_2 = pd.read_sql_query(
+        """
+        select
+            municipality_name,
+            total_reported,
+            date_of_publication
+        from
+            municipality_totals_daily
+        where
+            municipality_name in ('Amsterdam', 'Rotterdam', 'Groningen')
+            and
+                date_of_publication between '2022-01-01' and '2022-12-31'
+        group by
+            (date_of_publication::date),
+            (municipality_name),
+            (total_reported)
+        order by
+            (date_of_publication)
+        """,
+        con=engine,
+    )
+    return df_2
 
+
+df_2 = get_data2()
 
 df2_filtered = df_2.loc[df_2["date_of_publication"].between(date_range[0], date_range[1])]
 fig2_filtered = px.line(
